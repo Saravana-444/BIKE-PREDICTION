@@ -64,26 +64,43 @@ rating = st.sidebar.slider(
 )
 
 # ------------------ RECOMMENDATION LOGIC ------------------
-def recommend_bikes(user_input, top_n=5):
-    feature_cols = [
-        'price',
-        'displacement_cc',
-        'city_mileage',
-        'highway_mileage',
-        'average_stars'
-    ]
+def recommend_bikes(user_input):
+    # 1. Preprocess and encode user input
+    user_df = pd.DataFrame([user_input])
+    user_scaled = scaler.transform(user_df)  # <-- scaled features
 
-    data_features = df[feature_cols]
-    scaled_data = scaler.transform(data_features)
+    # 2. scaled_data is your dataset after scaling
+    # scaled_data = scaler.transform(bike_data_features)
 
-    user_scaled = scaler.transform(user_input)
+    # 3. Compute similarity
     similarity = cosine_similarity(user_scaled, scaled_data)
 
-    top_indices = similarity[0].argsort()[-top_n:][::-1]
-    return df.iloc[top_indices][
-        ['bike', 'price', 'displacement_cc',
-         'city_mileage', 'highway_mileage', 'average_stars']
-    ]
+    # 4. Get recommendations
+    top_indices = similarity.argsort()[0][-5:][::-1]
+    return bike_data.iloc[top_indices]
+
+import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity
+
+def recommend_bikes(user_input):
+    # Preprocess and encode user input
+    user_df = pd.DataFrame([user_input])
+    user_scaled = scaler.transform(user_df)
+
+    # Handle NaN or Inf
+    user_scaled = np.nan_to_num(user_scaled, nan=0.0, posinf=0.0, neginf=0.0)
+    scaled_data_clean = np.nan_to_num(scaled_data, nan=0.0, posinf=0.0, neginf=0.0)
+
+    # Ensure 2D shape
+    if user_scaled.ndim == 1:
+        user_scaled = user_scaled.reshape(1, -1)
+
+    # Compute similarity safely
+    similarity = cosine_similarity(user_scaled, scaled_data_clean)
+
+    # Get top recommendations
+    top_indices = similarity.argsort()[0][-5:][::-1]
+    return bike_data.iloc[top_indices]
 
 # ------------------ BUTTON ------------------
 if st.button("🔍 Recommend Bikes"):
