@@ -65,19 +65,36 @@ rating = st.sidebar.slider(
 
 # ------------------ RECOMMENDATION LOGIC ------------------
 def recommend_bikes(user_input):
-    # 1. Preprocess and encode user input
-    user_df = pd.DataFrame([user_input])
-    user_scaled = scaler.transform(user_df)  # <-- scaled features
+    # --- Ensure 2D DataFrame with proper columns ---
+    columns = ['Brand','Model','Year','Engine','Price']  # Replace with your actual dataset columns
+    
+    # If user_input is a dict or list
+    if isinstance(user_input, dict):
+        user_df = pd.DataFrame([user_input])
+    elif isinstance(user_input, list):
+        user_df = pd.DataFrame([user_input], columns=columns)
+    else:
+        raise ValueError("user_input must be a dict or list")
 
-    # 2. scaled_data is your dataset after scaling
-    # scaled_data = scaler.transform(bike_data_features)
+    # --- Scale features ---
+    user_scaled = scaler.transform(user_df)
 
-    # 3. Compute similarity
-    similarity = cosine_similarity(user_scaled, scaled_data)
+    # --- Replace NaN/Inf to avoid cosine_similarity error ---
+    import numpy as np
+    user_scaled = np.nan_to_num(user_scaled, nan=0.0, posinf=0.0, neginf=0.0)
+    scaled_data_clean = np.nan_to_num(scaled_data, nan=0.0, posinf=0.0, neginf=0.0)
 
-    # 4. Get recommendations
+    # --- Ensure 2D shape ---
+    if user_scaled.ndim == 1:
+        user_scaled = user_scaled.reshape(1, -1)
+
+    # --- Compute similarity ---
+    similarity = cosine_similarity(user_scaled, scaled_data_clean)
+
+    # --- Get top recommendations ---
     top_indices = similarity.argsort()[0][-5:][::-1]
     return bike_data.iloc[top_indices]
+
 
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
